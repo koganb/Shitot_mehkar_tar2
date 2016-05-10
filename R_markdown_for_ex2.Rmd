@@ -1,0 +1,54 @@
+---
+title: "Ex2_solution"
+output: html_document
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+In order to start working, we'll first have to upload the file to R:
+```{r}
+require(psych)
+path <- "C:\\Users\\abrahami\\Documents\\Private\\Uni\\BGU\\research_methods\\Ex2\\data_and_headers_processed.csv"
+data = read.csv (file = path, header = TRUE)
+```
+
+Since all the numeric features were uploaded as factors, we'll convert them to numeric:
+```{r}
+numeric.feature.names <- names(data)[c(which(names(data)=='QL1'):which(names(data)=='DI1'), which(names(data)=='BF2_Num'):which(names(data)=='S6'))]
+data[,numeric.feature.names] <- sapply(X = data[, numeric.feature.names],FUN = as.numeric) 
+```
+
+> Section A
+
+2. Possible problems:
+  + Hebrew mixed with English - we took this problem and fixed the input file to include only english letters 
+  + The age feature seems to have unlogical values - missing values, a value with the string "C1", and some numbers in int and some in double. Here how we found all these strange cases:
+```{r, echo=TRUE}
+table(data$Age)
+```
+
+  + The sex feature have 2 missing values. You can see it here:
+```{r, echo=TRUE}
+table(data$Sex)
+```
+
+  + The features don't really distribute noramly (i.e according to normal distribution) - it's not a problem by unless we assume it should distribute normaly. Here are few exmaples
+```{r, echo=TRUE}
+multi.hist(x = data[,numeric.feature.names[1:6]])
+```
+
+3. Creation of the new desired features:
+```{r, echo=TRUE}
+data.for.clarity <- cbind(data[,c("C1", "C2", "C3", "C5")], 8-data$C4, 8-data$C6)
+clarity <- apply(data.for.clarity, MARGIN = 1, FUN = mean)
+
+data.for.politeness <- cbind(data[,c("P1", "P2", "P4", "P5", "P6")], 8-data$P3)
+politeness <- apply(data.for.politeness, MARGIN = 1, FUN = mean)
+
+data.for.satisfaction <- cbind(data[,c("S1", "S2", "S3", "S5", "S6")], 8-data$S4)
+satisfaction <- apply(data.for.politeness, MARGIN = 1, FUN = mean)
+
+#now adding them to the data frame
+data <- cbind(data, clarity = clarity, politeness = politeness, satisfaction = satisfaction)
+```
+
