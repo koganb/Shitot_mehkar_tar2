@@ -1,0 +1,168 @@
+---
+title: "tar2"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = 'pdf')
+require(xlsx)
+require(plotrix)
+require(plyr)
+require(moments)                    # load e1071
+
+```
+
+
+#Part 1: 
+Create clarity, politeness, satisfaction variables
+```{r data, cache=TRUE, warning=FALSE, message=FALSE}
+data <- read.xlsx("data_and_headers_processed.xlsx", 1, stringsAsFactors=T)
+data$Age <- as.numeric(as.character(data$Age))
+
+data.for.clarity <- cbind(data[,c("C1", "C2", "C3", "C5")], 8-data$C4, 8-data$C6)
+clarity <- apply(data.for.clarity, MARGIN = 1, FUN = mean)
+
+data.for.politeness <- cbind(data[,c("P1", "P2", "P4", "P5", "P6")], 8-data$P3)
+politeness <- apply(data.for.politeness, MARGIN = 1, FUN = mean)
+
+data.for.satisfaction <- cbind(data[,c("S1", "S2", "S3", "S5", "S6")], 8-data$S4)
+satisfaction <- apply(data.for.satisfaction, MARGIN = 1, FUN = mean)
+
+#now adding them to the data frame
+data <- cbind(data, clarity = clarity, politeness = politeness, satisfaction = satisfaction)
+```
+
+
+
+Part 2
+Descriptive statistics (2.1)
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+
+drawPieChart <- function (slices, lbls, main) {
+  pct <- round(slices/sum(slices)*100)  #http://www.statmethods.net/graphs/pie.html
+  lbls <- paste(lbls, pct) # add percents to labels 
+  lbls <- paste(lbls,"%",sep="") # ad % to labels 
+  pie3D(slices, labels = lbls, explode=0.1,main=main,labelcex =0.8)
+  return()
+}
+
+drawHist <- function (histData, br, main) {
+  hist(histData, col="red", breaks = br, main =main)
+  return()
+}
+
+
+summaryDataFrame<- function(dataCol, dataColNames = NA) {
+  dataColSummary <- summary(dataCol)
+  resframe <- data.frame(matrix(unlist(dataColSummary), nrow=1, byrow=T))
+  if (is.na(dataColNames)) {
+    colnames(resframe) <- names(dataColSummary)
+  }
+  else if (length(colnames(resframe)) == length(dataColNames)){
+    colnames(resframe) <- dataColNames
+  }
+  else {
+    colnames(resframe) <- c(dataColNames, "NA's")
+  }
+
+  return(resframe)
+}
+
+combineSummaryFrame <- function (colData1, colData2, colnames=NA, rowNames) {
+  combineFrame <- rbind.fill(summaryDataFrame(colData1, colnames), summaryDataFrame(colData2, colnames)) 
+  rownames(combineFrame) <- rowNames
+  return(combineFrame)
+}
+
+
+```
+
+data$Age
+```{r warning=FALSE, message=FALSE, fig.height=3}
+par(mfrow=c(1,2)) 
+combineSummaryFrame(data[data$System=='C',]$Age, data[data$System=='S',]$Age, rowNames = c('C', 'S'))
+invisible(drawHist(data[data$System=='C',]$Age, br=20, main='C')) #suppress ## NULL
+invisible(drawHist(data[data$System=='S',]$Age, br=20, main='S'))
+```
+
+
+data$Sex
+```{r warning=FALSE, message=FALSE, fig.height=3}
+par(mfrow=c(1,2)) 
+colnames <- c("men", "women")
+combineSummaryFrame(data[data$System=='C',]$Sex, data[data$System=='S',]$Sex, colnames = colnames, rowNames = c('C', 'S'))
+invisible(drawPieChart(table(data[data$System=='C',]$Sex), colnames, main='C'))
+invisible(drawPieChart(table(data[data$System=='S',]$Sex), colnames, main='S'))
+```
+
+
+
+
+data$Comp_Use_Freq
+```{r warning=FALSE, message=FALSE, fig.height=3}
+par(mfrow=c(1,2)) 
+colnames <- c("2-5 hours", "5 hours", "less than one time", "less than 2 hours")
+combineSummaryFrame(data[data$System=='C',]$Comp_Use_Freq, data[data$System=='S',]$Comp_Use_Freq, colnames = colnames, rowNames = c('C', 'S'))
+invisible(drawPieChart(table(data[data$System=='C',]$Comp_Use_Freq), colnames, main='C'))
+invisible(drawPieChart(table(data[data$System=='S',]$Comp_Use_Freq), colnames, main='S'))
+```
+
+
+data$Comp_Use_Know
+```{r warning=FALSE, message=FALSE, fig.height=3}
+par(mfrow=c(1,2)) 
+colnames <- c("beginner", "intermediate", "advanced",  "expert")
+combineSummaryFrame(data[data$System=='C',]$Comp_Use_Know, data[data$System=='S',]$Comp_Use_Know, colnames = colnames, rowNames = c('C', 'S'))
+invisible(drawPieChart(table(data[data$System=='C',]$Comp_Use_Know), colnames, main='C'))
+invisible(drawPieChart(table(data[data$System=='S',]$Comp_Use_Know), colnames, main='S'))
+```
+
+
+data$Selected_Software
+```{r warning=FALSE, message=FALSE, fig.height=3.5}
+par(mfrow=c(1,2)) 
+combineSummaryFrame(data[data$System=='C',]$Selected_Software, data[data$System=='S',]$Selected_Software, rowNames = c('C', 'S'))
+invisible(barplot(table(data[data$System=='C',]$Selected_Software), las=2, col = 'red', main='C'))
+invisible(barplot(table(data[data$System=='S',]$Selected_Software), las=2, col = 'red', main='S'))
+```
+
+
+
+Part 2.2
+
+```{r warning=FALSE, message=FALSE}
+
+data_filtered <- data[data$System == 'C' & data$Age  >= 18 & data$Age<=49,]
+
+stat_data <- data_filtered[ ,names(data_filtered) %in% c("clarity", "politeness", "satisfaction")]
+stat_res <- data.frame(
+  apply(stat_data, 2, length), 
+  apply(stat_data, 2, mean, na.rm=TRUE), 
+  apply(stat_data, 2, sd, na.rm=TRUE), 
+  apply(stat_data, 2, min, na.rm=TRUE), 
+  apply(stat_data, 2, max, na.rm=TRUE), 
+  apply(stat_data, 2, kurtosis, na.rm=TRUE),
+  apply(stat_data, 2, skewness, na.rm=TRUE)
+)
+colnames(stat_res) <- c('count', 'mean', 'sd', 'min', 'max', 'kurtosis', 'skewness')
+stat_res
+```
+
+
+#Part 2.3
+
+
+#Part 2.4
+```{r warning=FALSE, message=FALSE}
+
+lmodel1 = lm(satisfaction ~ Age+Sex, data = data_filtered)
+summary(lmodel1)
+
+lmodel2 = lm(satisfaction ~ Age+Sex+clarity+politeness, data = data_filtered)
+summary(lmodel2)
+
+anova(lmodel1, lmodel2)
+
+```
