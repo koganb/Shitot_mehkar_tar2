@@ -35,8 +35,8 @@ data <- cbind(data, clarity = clarity, politeness = politeness, satisfaction = s
 
 
 
-Part 2
-Descriptive statistics (2.1)
+#Part 2
+###Descriptive statistics (2.1)
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -74,6 +74,36 @@ combineSummaryFrame <- function (colData1, colData2, colnames=NA, rowNames) {
   combineFrame <- rbind.fill(summaryDataFrame(colData1, colnames), summaryDataFrame(colData2, colnames)) 
   rownames(combineFrame) <- rowNames
   return(combineFrame)
+}
+
+
+#http://myowelt.blogspot.co.il/2008/04/beautiful-correlation-tables-in-r.html
+corstarsl <- function(x){ 
+    require(Hmisc) 
+    x <- as.matrix(x) 
+    R <- rcorr(x)$r 
+    p <- rcorr(x)$P 
+    
+    ## define notions for significance levels; spacing is important.
+    mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ", " ")))
+    
+    ## trunctuate the matrix that holds the correlations to two decimal
+    R <- format(round(cbind(rep(-1.11, ncol(x)), R), 2))[,-1] 
+    
+    ## build a new matrix that includes the correlations with their apropriate stars 
+    Rnew <- matrix(paste(R, mystars, sep=""), ncol=ncol(x)) 
+    diag(Rnew) <- paste(diag(R), " ", sep="") 
+    rownames(Rnew) <- colnames(x) 
+    colnames(Rnew) <- paste(colnames(x), "", sep="") 
+    
+    ## remove upper triangle
+    Rnew <- as.matrix(Rnew)
+    Rnew[upper.tri(Rnew, diag = TRUE)] <- ""
+    Rnew <- as.data.frame(Rnew) 
+    
+    ## remove last column and return the matrix (which is now a data frame)
+    Rnew <- cbind(Rnew[1:length(Rnew)-1])
+    return(Rnew) 
 }
 
 
@@ -152,6 +182,11 @@ stat_res
 
 
 #Part 2.3
+
+```{r warning=FALSE, message=FALSE}
+stat_data_2.3 <- data_filtered[ ,names(data_filtered) %in% c("Age", "clarity", "politeness", "satisfaction")]
+corstarsl(stat_data_2.3)
+```
 
 
 #Part 2.4
