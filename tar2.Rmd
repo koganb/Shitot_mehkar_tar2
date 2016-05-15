@@ -7,6 +7,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(dev = 'pdf')
 require(xlsx)
+require(psych)
 require(plotrix)
 require(plyr)
 require(moments)                    # load e1071
@@ -15,9 +16,29 @@ require(moments)                    # load e1071
 
 
 #Part 1: 
-Create clarity, politeness, satisfaction variables
+
 ```{r data, cache=TRUE, warning=FALSE, message=FALSE}
 data <- read.xlsx("data_and_headers_processed.xlsx", 1, stringsAsFactors=T)
+```
+
+2. Possible problems:
+  + Hebrew mixed with English - we took this problem and fixed the input file to include only english letters 
+  + The sex feature have 2 missing values. You can see it here:
+```{r, warning=FALSE, message=FALSE}
+    summary(data$Sex)
+```
+
+  + The features don't really distribute noramly (i.e according to normal distribution) - it's not a problem by unless we assume it should distribute normaly. Here are few exmaples
+
+```{r, warning=FALSE, message=FALSE}
+    numeric.feature.names <- names(data)[c(which(names(data)=='QL1'):which(names(data)=='DI1'), which(names(data)=='BF2_Num'):which(names(data)=='S6'))]
+
+    multi.hist(x = data[,numeric.feature.names[1:6]])
+
+```
+
+Create clarity, politeness, satisfaction variables
+```{r warning=FALSE, message=FALSE}
 data$Age <- as.numeric(as.character(data$Age))
 
 data.for.clarity <- cbind(data[,c("C1", "C2", "C3", "C5")], 8-data$C4, 8-data$C6)
