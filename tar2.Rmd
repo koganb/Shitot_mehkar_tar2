@@ -11,7 +11,7 @@ require(psych)
 require(plotrix)
 require(plyr)
 require(moments)                    # load e1071
-
+require(QuantPsyc)
 ```
 
 
@@ -23,8 +23,12 @@ data <- read.xlsx("data_and_headers_processed.xlsx", 1, stringsAsFactors=T)
 
 2. Possible problems:
   + Hebrew mixed with English - we took this problem and fixed the input file to include only english letters 
-  + The sex feature have 2 missing values. You can see it here:
+  + The sex, age  feature have missing values - removing this records 
 ```{r, warning=FALSE, message=FALSE}
+    data$Age <- as.numeric(as.character(data$Age))
+    data <- data[!is.na(data$Age),]
+    data <- data[!is.na(data$Sex),]
+    summary(data$Age)
     summary(data$Sex)
 ```
 
@@ -37,9 +41,17 @@ data <- read.xlsx("data_and_headers_processed.xlsx", 1, stringsAsFactors=T)
 
 ```
 
+
+Clean data set - remove NA Age values
+```{ r warning=FALSE, message=FALSE}
+```
+
+
+
 Create clarity, politeness, satisfaction variables
 ```{r warning=FALSE, message=FALSE}
-data$Age <- as.numeric(as.character(data$Age))
+
+
 
 data.for.clarity <- cbind(data[,c("C1", "C2", "C3", "C5")], 8-data$C4, 8-data$C6)
 clarity <- apply(data.for.clarity, MARGIN = 1, FUN = mean)
@@ -57,7 +69,10 @@ data <- cbind(data, clarity = clarity, politeness = politeness, satisfaction = s
 
 
 #Part 2
-###Descriptive statistics (2.1)
+##Part 2.1
+####Descriptive statistics
+Comparing the different parameters grouped by system type.
+
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -181,7 +196,11 @@ invisible(barplot(table(data[data$System=='S',]$Selected_Software), las=2, col =
 
 
 
-Part 2.2
+##Part 2.2
+Create descriptive statistics for clarity, politeness, satisfactions
+clarity is right skewed,  politeness and satisfactions are almost not skewed
+All variables have strong positive kurtosis
+
 
 ```{r warning=FALSE, message=FALSE}
 
@@ -202,7 +221,10 @@ stat_res
 ```
 
 
-#Part 2.3
+##Part 2.3
+####Create correlation table for Age, clarity, politeness, satisfactions
+From the results can be seen that clarity, politeness and  satisfactions are mutually strongly positively correlated
+There is some degree of negative correlation between age and satisfaction
 
 ```{r warning=FALSE, message=FALSE}
 stat_data_2.3 <- data_filtered[ ,names(data_filtered) %in% c("Age", "clarity", "politeness", "satisfaction")]
@@ -210,15 +232,37 @@ corstarsl(stat_data_2.3)
 ```
 
 
-#Part 2.4
-```{r warning=FALSE, message=FALSE}
+##Part 2.4
+####Genarate linear regression for satisfaction depended by Age and Sex - (lmodel1), Age, Sex, clarity, politeness (lmodel2) 
+Model is significant in both cases , but 'Coefficient of determination' (R^2 and adjusted R^2) are far greater in second case
+Also 'Age' and 'Sex' have no significant influence on regression model in second case 
 
+
+```{r warning=FALSE, message=FALSE}
 lmodel1 = lm(satisfaction ~ Age+Sex, data = data_filtered)
 summary(lmodel1)
 
 lmodel2 = lm(satisfaction ~ Age+Sex+clarity+politeness, data = data_filtered)
 summary(lmodel2)
 
-anova(lmodel1, lmodel2)
+```
 
+####Generating standardized regression coefficients####
+
+The standardized values correspond with previous results:
+* Age and Satisfaction are loosely negative correlated
+* 'Clarity' and 'Politeness' have far stronger influence on 'Satifaction' than 'Age' and 'Sex'
+* At second regression 'Age' and 'Sex' can be removed from regression formula
+
+
+```{r warning=FALSE, message=FALSE}
+lm.beta(lmodel1)
+lm.beta(lmodel2)
+```
+
+
+####Comapare 2 models using anova test
+The results show that second model is significally better than the first
+```{r warning=FALSE, message=FALSE}
+anova(lmodel1, lmodel2)
 ```
